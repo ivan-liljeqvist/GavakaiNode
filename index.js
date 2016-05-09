@@ -3,6 +3,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var app = express();
 var sleep = require('sleep');
+var json2csv = require('json2csv');
 
 //init body parser
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -29,6 +30,40 @@ var rowsWithSentiment=[]; //like rows but filled with sentiment from Gavagai
 var counter=0;
 var numToBeCompleted=0;
 
+
+function produceCSV(){
+
+    var fields = ['id', 'thread', 'username', 'comment', 'scepticism', 
+                                                         'love', 
+                                                         'negativity', 
+                                                         'fear',
+                                                         'desire',
+                                                         'positivity',
+                                                         'hate',
+                                                       'violence'];
+
+    //convert json to CSV
+    json2csv({ data: rowsWithSentiment, fields: fields }, function(err, csv) {
+      if (err) console.log(err);
+      else{
+        //save the csv
+        fs.writeFile("./output/csv_with_sentiment.csv", csv, function(err) {
+            if(err) {
+                return console.log(err);
+            }
+
+            console.log("The file was saved!");
+        }); 
+      }
+
+      
+      
+    });
+
+
+
+}
+
 function addSentimentToRows(hundredRows,chunkNum,chunkSize){
 
     var wait=Math.random()*1000;
@@ -53,20 +88,25 @@ function addSentimentToRows(hundredRows,chunkNum,chunkSize){
               data.texts.forEach(function(text){
 
                 var indexInRowsArray = parseInt(text.id)+(chunkNum-1)*chunkSize;
-                rows[indexInRowsArray][4]=text.tonality[0].normalizedScore; //scepticism
-                rows[indexInRowsArray][5]=text.tonality[1].normalizedScore; //love
-                rows[indexInRowsArray][6]=text.tonality[2].normalizedScore; //negativity
-                rows[indexInRowsArray][7]=text.tonality[3].normalizedScore; //fear
-                rows[indexInRowsArray][8]=text.tonality[4].normalizedScore; //desire
-                rows[indexInRowsArray][9]=text.tonality[5].normalizedScore; //positivity
-                rows[indexInRowsArray][10]=text.tonality[6].normalizedScore; //hate
-                rows[indexInRowsArray][11]=text.tonality[7].normalizedScore; //violence
+                rowsWithSentiment[indexInRowsArray]={}
+                rowsWithSentiment[indexInRowsArray].id=rows[indexInRowsArray][0];
+                rowsWithSentiment[indexInRowsArray].thread=rows[indexInRowsArray][1];
+                rowsWithSentiment[indexInRowsArray].username=rows[indexInRowsArray][2];
+                rowsWithSentiment[indexInRowsArray].comment=rows[indexInRowsArray][3];
+                rowsWithSentiment[indexInRowsArray].scepticism=text.tonality[0].normalizedScore; //scepticism
+                rowsWithSentiment[indexInRowsArray].love=text.tonality[1].normalizedScore; //love
+                rowsWithSentiment[indexInRowsArray].negativity=text.tonality[2].normalizedScore; //negativity
+                rowsWithSentiment[indexInRowsArray].fear=text.tonality[3].normalizedScore; //fear
+                rowsWithSentiment[indexInRowsArray].desire=text.tonality[4].normalizedScore; //desire
+                rowsWithSentiment[indexInRowsArray].positivity=text.tonality[5].normalizedScore; //positivity
+                rowsWithSentiment[indexInRowsArray].hate=text.tonality[6].normalizedScore; //hate
+                rowsWithSentiment[indexInRowsArray].violence=text.tonality[7].normalizedScore; //violence
 
 
               });
 
               if(numToBeCompleted<=0){
-                console.log("DONE!!")
+                produceCSV(); //if we've completed all request - export as csv
               }
 
             }
